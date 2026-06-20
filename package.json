@@ -1,0 +1,24 @@
+{
+	"name": "companion-surface-nes",
+	"version": "1.0.0",
+	"main": "dist/main.js",
+	"type": "module",
+	"scripts": {
+		"build": "rimraf dist && tsc -p tsconfig.build.json",
+		"dev": "tsc -p tsconfig.build.json --watch",
+		"package": "npm run build && companion-surface-build"
+	},
+	"license": "MIT",
+	"engines": {
+		"node": "^22.14"
+	},
+	"dependencies": {
+		"@companion-surface/base": "^1.0.0"
+	},
+	"devDependencies": {
+		"@companion-module/tools": "^2.5.0",
+		"@types/node": "^22.19.3",
+		"rimraf": "^6.0.0",
+		"typescript": "~5.9.3"
+	}
+}

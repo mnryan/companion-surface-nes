@@ -1,0 +1,21 @@
+{
+	"$schema": "../node_modules/@companion-surface/base/assets/manifest.schema.json",
+	"type": "surface",
+	"id": "nes-controller",
+	"name": "NES Switch Controllers",
+	"shortname": "nes-controller",
+	"description": "Use Nintendo's NES-style Switch controllers as local Companion surfaces (macOS). Each controller is its own surface.",
+	"version": "0.0.0",
+	"license": "MIT",
+	"repository": "",
+	"bugs": "",
+	"maintainers": [{ "name": "SUDev" }],
+	"runtime": {
+		"type": "node22",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../dist/main.js"
+	},
+	"keywords": ["nintendo", "nes", "switch", "controller", "gamepad"],
+	"products": ["NES Controller (L)", "NES Controller (R)"],
+	"usbIds": []
+}

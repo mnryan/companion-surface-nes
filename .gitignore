@@ -1,0 +1,7 @@
+node_modules/
+dist/
+pkg/
+*.tgz
+
+# Compiled native helper binaries (built from helper-src/, shipped via Releases)
+helpers/
