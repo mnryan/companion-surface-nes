@@ -1,5 +1,7 @@
 # companion-surface-nes
 
+**A free plugin from [Studio Upgrade](https://studioupgrade.com), designed by Ryan Grams.**
+
 Use Nintendo's **NES-style Switch Online controllers** as **local surfaces** in [Bitfocus Companion](https://bitfocus.io/companion). Each controller (Left and Right) shows up as its own surface — just like a Stream Deck — identified by its Bluetooth address, with its own enable/disable toggle.
 
 > **Platform:** macOS (Apple Silicon & Intel) today. **Windows and Linux are coming but not ready yet.**
@@ -53,6 +55,10 @@ npm run package      # -> nes-controller-<version>.tgz
 
 For development, point Companion's **Developer modules path** at the parent folder and run `npm run build`.
 
+## Support
+
+This is free — built by [Studio Upgrade](https://studioupgrade.com) (Ryan Grams) and given away. If it saved you time on a show, you can [**sponsor it / buy me a coffee ☕**](https://github.com/sponsors/mnryan). Totally optional — bug reports, ideas, and shares help just as much.
+
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — © Ryan Grams / Studio Upgrade

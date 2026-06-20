@@ -47,3 +47,10 @@ Now both surfaces show and control the same page: the Stream Deck/Emulator **dis
 ## Platform support
 - **macOS:** supported now (Apple Silicon and Intel). Input is read by a small bundled native helper.
 - **Windows & Linux:** **coming soon — not ready yet.** The surface module itself is cross-platform; those platforms just need their own helper binary, which is in progress.
+
+---
+
+## Made by
+A free plugin from **[Studio Upgrade](https://studioupgrade.com)**, designed by **Ryan Grams**.
+
+If it saves you time, you can [**sponsor it / buy me a coffee ☕**](https://github.com/sponsors/mnryan) — totally optional, always appreciated.

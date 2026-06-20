@@ -23,6 +23,8 @@ const TEMPLATE_PREVIEW_URL =
 	'https://raw.githubusercontent.com/mnryan/companion-surface-nes/main/docs/template-preview.png'
 const TEMPLATE_DOWNLOAD_URL =
 	'https://github.com/mnryan/companion-surface-nes/releases/download/v1.0.0/NES-StreamDeck-Template.companionconfig'
+const STUDIO_UPGRADE_URL = 'https://studioupgrade.com'
+const SPONSOR_URL = 'https://github.com/sponsors/mnryan'
 
 export interface NesInfo {
 	id: string // Bluetooth address (stable per physical controller)
@@ -162,7 +164,13 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 							'<br/><br/><a href="' +
 							TEMPLATE_DOWNLOAD_URL +
 							'" target="_blank">⬇ Download the label template (.companionconfig)</a>' +
-							' — then load it via Companion\'s <b>Import / Export</b> page.',
+							' — then load it via Companion\'s <b>Import / Export</b> page.' +
+							'<br/><br/>A free plugin from <a href="' +
+							STUDIO_UPGRADE_URL +
+							'" target="_blank">Studio Upgrade</a>, designed by Ryan Grams · ' +
+							'<a href="' +
+							SPONSOR_URL +
+							'" target="_blank">buy me a coffee ☕</a>',
 					},
 				],
 			},
