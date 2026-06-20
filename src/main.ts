@@ -18,6 +18,12 @@ import { createLayout } from './buttons.js'
 
 const logger = createModuleLogger('Plugin')
 
+// Shown on each controller's surface settings page (loaded from the repo/release).
+const TEMPLATE_PREVIEW_URL =
+	'https://raw.githubusercontent.com/mnryan/companion-surface-nes/main/docs/template-preview.png'
+const TEMPLATE_DOWNLOAD_URL =
+	'https://github.com/mnryan/companion-surface-nes/releases/download/v1.0.0/NES-StreamDeck-Template.companionconfig'
+
 export interface NesInfo {
 	id: string // Bluetooth address (stable per physical controller)
 	side: string // "L" | "R"
@@ -143,7 +149,22 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 				surfaceLayout: createLayout(),
 				pincodeMap: null,
 				location: null,
-				configFields: null,
+				configFields: [
+					{
+						id: 'template_info',
+						type: 'static-text',
+						label: 'Stream Deck label template',
+						value:
+							'Pair this controller with a Stream Deck or Emulator and import the template so the display shows what each button does:' +
+							'<br/><br/><img src="' +
+							TEMPLATE_PREVIEW_URL +
+							'" style="max-width:100%;border-radius:6px"/>' +
+							'<br/><br/><a href="' +
+							TEMPLATE_DOWNLOAD_URL +
+							'" target="_blank">⬇ Download the label template (.companionconfig)</a>' +
+							' — then load it via Companion\'s <b>Import / Export</b> page.',
+					},
+				],
 			},
 		}
 	}
