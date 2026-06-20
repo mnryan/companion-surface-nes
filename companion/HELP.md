@@ -53,4 +53,6 @@ Now both surfaces show and control the same page: the Stream Deck/Emulator **dis
 ## Made by
 A free plugin from **[Studio Upgrade](https://studioupgrade.com)**, designed by **Ryan Grams**.
 
-If it saves you time, you can [**sponsor it / buy me a coffee ☕**](https://github.com/sponsors/mnryan) — totally optional, always appreciated.
+Studio Upgrade designs and builds **custom self-operated automated studios** — the kind one person can run solo — and builds **custom Bitfocus Companion modules** as part of that. Need a module built, a commissioned project, or just have questions about your studio setup? We do consulting too. 📧 **ryan@studioupgrade.com**
+
+If it saves you time, [**sponsor it / buy me a coffee ☕**](https://github.com/sponsors/mnryan) — totally optional, always appreciated.

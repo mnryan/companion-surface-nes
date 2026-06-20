@@ -55,9 +55,15 @@ npm run package      # -> nes-controller-<version>.tgz
 
 For development, point Companion's **Developer modules path** at the parent folder and run `npm run build`.
 
+## About Studio Upgrade
+
+[Studio Upgrade](https://studioupgrade.com) designs and builds **custom, self-operated automated studios** — the kind one person can run without breaking a sweat. Building **custom Bitfocus Companion modules** is part of that work.
+
+Need a module built, a commissioned project, or just have questions about your studio setup? Consulting's available too. 📧 **ryan@studioupgrade.com**
+
 ## Support
 
-This is free — built by [Studio Upgrade](https://studioupgrade.com) (Ryan Grams) and given away. If it saved you time on a show, you can [**sponsor it / buy me a coffee ☕**](https://github.com/sponsors/mnryan). Totally optional — bug reports, ideas, and shares help just as much.
+This plugin is free. If it saved you time on a show, you can [**sponsor it / buy me a coffee ☕**](https://github.com/sponsors/mnryan). Totally optional — bug reports, ideas, and shares help just as much.
 
 ## License
 
