@@ -47,6 +47,9 @@ export class NesSurface implements SurfaceInstance {
 	}
 
 	async init(): Promise<void> {}
+	async updateConfig(_config: Record<string, any>): Promise<void> {
+		// No editable config — the settings field is informational (static-text) only.
+	}
 	async close(): Promise<void> {
 		this.#bus.off('button', this.#onButton)
 		this.#bus.off('gone', this.#onGone)

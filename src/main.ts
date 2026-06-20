@@ -158,7 +158,7 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 							'Pair this controller with a Stream Deck or Emulator and import the template so the display shows what each button does:' +
 							'<br/><br/><img src="' +
 							TEMPLATE_PREVIEW_URL +
-							'" style="max-width:100%;border-radius:6px"/>' +
+							'" alt="NES button layout" width="320"/>' +
 							'<br/><br/><a href="' +
 							TEMPLATE_DOWNLOAD_URL +
 							'" target="_blank">⬇ Download the label template (.companionconfig)</a>' +
