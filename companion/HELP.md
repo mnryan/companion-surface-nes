@@ -48,6 +48,15 @@ Now both surfaces show and control the same page: the Stream Deck/Emulator **dis
 - **macOS:** supported now (Apple Silicon and Intel). Input is read by a small bundled native helper.
 - **Windows & Linux:** **coming soon — not ready yet.** The surface module itself is cross-platform; those platforms just need their own helper binary, which is in progress.
 
+## Tips & ideas
+
+The whole point of pairing a controller with a display is flexibility. A couple of patterns worth stealing:
+
+- **Shoulders as pages.** Map **L / R** to page up / page down so the shoulders become a *mode selector* — flip pages to switch modes, then use the face buttons + D-pad for whatever mode you're on.
+- **Hold-to-shift (modifier buttons).** Set **R** to flip a custom variable hot on press / clear on release, then use a conditional (if/then) action on another button: when R is hot, **A** does one thing; when it isn't, **A** does another. A built-in "shift key" that doubles your buttons.
+
+Got a clever use? **[Share it in Discussions](https://github.com/mnryan/companion-surface-nes/discussions)** — I'd love to see how people put this to work.
+
 ---
 
 ## Made by

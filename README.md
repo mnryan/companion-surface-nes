@@ -38,6 +38,17 @@ row2  (page dn)   Down     Select   Start    —
 
 `SL`/`SR` are the shoulder rail buttons (Companion sees them as `L`/`R`). Column 0 is intentionally left free so a paired Stream Deck keeps its default page-navigation buttons. See [`companion/HELP.md`](companion/HELP.md) for the full guide, including the included **label template** (`template/`) and how to run a controller + Stream Deck/Emulator together in a **surface group**.
 
+## Why this exists + tips
+
+I have more Stream Decks than I can count and I love them — but I'd been playing with wireless options, and I had a pile of Bluetooth Switch controllers sitting around. The NES pads are my favorite, so: why not drive Companion with one? The only catch is a controller has no screen — so I park a spare **15-key Stream Deck (or the Emulator) next to it as a live legend**. That's exactly why the layout maps to a 15-key grid and why the button graphics exist: glance at the Deck, see what every NES button does.
+
+A few ways I use it — steal freely:
+
+- **Shoulders as pages.** Map **L / R** to page up / page down. The shoulders become a *mode selector* — flip pages to switch modes, then use the face buttons + D-pad to run whatever mode you're on.
+- **Hold-to-shift (modifier buttons).** Set **R** to flip a custom variable *hot* on press and clear it on release. Then on, say, **A**, use a conditional (if/then) action: when the R variable is hot, A does one thing; when it isn't, A does another. Instant "shift key" — double your buttons.
+
+Got a clever use? **[Share it in Discussions »](https://github.com/mnryan/companion-surface-nes/discussions)** — I'm genuinely curious how people put this to work.
+
 ## Build from source (macOS + Swift)
 
 ```sh
