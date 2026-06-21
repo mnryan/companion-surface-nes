@@ -51,12 +51,35 @@ class NesDetection
 
 // Locate the platform-specific native helper binary (macOS/Linux). Packager
 // flattens extra files to basename, so helpers carry a platform-arch suffix.
+// NOTE: webpack (companion-surface-build) HARDCODES import.meta.url to the build
+// machine's path, so it's useless at runtime on any other machine. Resolve the
+// helper from real runtime locations instead (same approach as win-reader's
+// node-hid loader) — otherwise the helper is only found on the build machine.
 function findHelper(): string | null {
-	const here = dirname(fileURLToPath(import.meta.url))
 	const ext = process.platform === 'win32' ? '.exe' : ''
 	const name = `nes-helper-${process.platform}-${process.arch}${ext}`
-	const candidates = [join(here, name), join(here, '..', 'helpers', name)]
-	return candidates.find((p) => existsSync(p)) ?? null
+	const bases: string[] = []
+	try {
+		if (typeof __dirname !== 'undefined' && __dirname) bases.push(__dirname)
+	} catch {
+		/* __dirname may not exist in ESM dev */
+	}
+	try {
+		if (process.argv[1]) bases.push(dirname(process.argv[1]))
+	} catch {
+		/* ignore */
+	}
+	try {
+		bases.push(dirname(fileURLToPath(import.meta.url)))
+	} catch {
+		/* import.meta.url may be a build path */
+	}
+	bases.push(process.cwd())
+	const candidates: string[] = []
+	for (const b of bases) candidates.push(join(b, name), join(b, 'helpers', name), join(b, '..', 'helpers', name))
+	const found = candidates.find((p) => existsSync(p))
+	if (!found) logger.warn(`No NES helper for ${process.platform}-${process.arch}; tried: ${candidates.join(' | ')}`)
+	return found ?? null
 }
 
 class NesControllerPlugin implements SurfacePlugin<NesInfo> {
