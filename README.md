@@ -66,6 +66,16 @@ npm run package      # -> nes-controller-<version>.tgz
 
 For development, point Companion's **Developer modules path** at the parent folder and run `npm run build`.
 
+### Linux helper (in progress)
+
+A dependency-free evdev helper (`helper-src/nes-helper-linux.c`) reads the controllers via the kernel `hid-nintendo` driver (Linux ≥ 6.8) and emits the same protocol. Build on the target:
+
+```sh
+gcc -O2 -o helpers/nes-helper-linux-$(node -p process.arch) helper-src/nes-helper-linux.c
+```
+
+Note: pairing Switch controllers to Linux can be unreliable on some onboard Bluetooth radios (notably the Raspberry Pi's). A cheap USB Bluetooth dongle (e.g. CSR8510) with the onboard radio disabled is the dependable setup.
+
 ## About Studio Upgrade
 
 [Studio Upgrade](https://studioupgrade.com) designs and builds **custom, self-operated automated studios** — the kind one person can run without breaking a sweat. Building **custom Bitfocus Companion modules** is part of that work.
