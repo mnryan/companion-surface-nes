@@ -1,8 +1,8 @@
 // Post-package step: companion-surface-build doesn't ship runtime node_modules,
 // so inject node-hid (the Windows input path) + its loader pkg-prebuilds into the
 // built package, prune node-hid's prebuilds to win32 only, and re-tar.
-import { execSync } from 'node:child_process'
 import { cpSync, rmSync, readdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
+import * as tar from 'tar'
 
 if (!existsSync('pkg')) {
 	console.error('postpackage: pkg/ not found — run companion-surface-build first')
@@ -25,7 +25,10 @@ if (existsSync(pre)) {
 	for (const d of readdirSync(pre)) if (!d.includes('win32')) rmSync(`${pre}/${d}`, { recursive: true, force: true })
 }
 
+// Re-tar with the SAME Node tar library Companion uses (portable mode), so the
+// archive extracts cleanly on import. (macOS `tar`/bsdtar produced Apple-metadata
+// quirks that made Companion's extractor fail with EISDIR.)
 const out = `${meta.name}-${meta.version}.tgz`
 rmSync(out, { force: true })
-execSync(`tar -czf ${out} pkg`)
-console.log(`postpackage: repacked ${out} with node-hid (win32 prebuilts)`)
+await tar.create({ gzip: true, file: out, portable: true }, ['pkg'])
+console.log(`postpackage: repacked ${out} with node-hid (win32 prebuilts) via node-tar`)
