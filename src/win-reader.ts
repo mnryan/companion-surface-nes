@@ -60,6 +60,7 @@ export interface WinReaderHandlers {
 	onAdd: (info: WinControllerInfo) => void
 	onRemove: (id: string) => void
 	onButton: (id: string, button: string, pressed: boolean) => void
+	onBattery: (id: string, percent: number) => void
 }
 
 // "b878261adda5" -> "B8:78:26:1A:DD:A5"
@@ -72,13 +73,24 @@ interface OpenDev {
 	id: string
 	hid: any
 	state: Record<string, boolean>
+	pollTimer?: ReturnType<typeof setInterval>
 }
 
 // Neutral rumble payload required as the prefix of Nintendo 0x01 output reports.
 const NEUTRAL_RUMBLE = [0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40]
-// Controller-type byte in the device-info (subcommand 0x02) reply. NES NSO = 0x09
-// (verified on hardware); Joy-Con L/R = 0x01/0x02, Pro Controller = 0x03.
-const NES_CONTROLLER_TYPE = 0x09
+
+// Battery from a standard report's status byte (buf[2]): top 3 bits = level
+// 4=full,3=med,2=low,1=critical,0=empty → map to a 0-100 percentage.
+function parseBatteryPercent(statusByte: number): number {
+	return (((statusByte & 0xe0) >> 5) * 25) | 0
+}
+// How often to poll the controller for a fresh battery reading.
+const BATTERY_POLL_MS = 45000
+// Controller-type bytes in the device-info (subcommand 0x02) reply (verified on
+// hardware): NES NSO Left = 0x09, Right = 0x0A. (Joy-Con L/R = 0x01/0x02, Pro = 0x03.)
+const NES_TYPE_LEFT = 0x09
+const NES_TYPE_RIGHT = 0x0a
+const NES_CONTROLLER_TYPES = [NES_TYPE_LEFT, NES_TYPE_RIGHT]
 
 /**
  * Windows reader: Switch controllers present as a standard HID gamepad with no
@@ -115,6 +127,7 @@ export class WinReader {
 		if (this.#timer) clearInterval(this.#timer)
 		this.#timer = null
 		for (const d of this.#devs.values()) {
+			if (d.pollTimer) clearInterval(d.pollTimer)
 			try {
 				d.hid.close()
 			} catch {
@@ -177,7 +190,7 @@ export class WinReader {
 
 		let decided = false
 		let timer: ReturnType<typeof setTimeout> | undefined
-		const decide = (type: number | null) => {
+		const decide = (type: number | null, battery: number | null) => {
 			if (decided) return
 			decided = true
 			if (timer) clearTimeout(timer)
@@ -188,7 +201,7 @@ export class WinReader {
 				/* ignore */
 			}
 			this.#pending.delete(key)
-			if (type !== null && type !== NES_CONTROLLER_TYPE) {
+			if (type !== null && !NES_CONTROLLER_TYPES.includes(type)) {
 				logger.info(`ignoring non-NES Nintendo device ${id} (type 0x${type.toString(16)})`)
 				this.#skip.add(key)
 				try {
@@ -204,11 +217,12 @@ export class WinReader {
 			} catch {
 				/* ignore */
 			}
-			this.#register(hid, key, id, type === null)
+			this.#register(hid, key, id, type, battery)
 		}
 		const onProbe = (buf: Buffer) => {
-			// device-info reply: 0x21 report, ACK byte 0x82, subcommand 0x02, type @17
-			if (buf[0] === 0x21 && buf.length > 17 && buf[13] === 0x82 && buf[14] === 0x02) decide(buf[17])
+			// device-info reply: 0x21 report, ACK byte 0x82, subcommand 0x02, type @17, battery @2
+			if (buf[0] === 0x21 && buf.length > 17 && buf[13] === 0x82 && buf[14] === 0x02)
+				decide(buf[17], parseBatteryPercent(buf[2]))
 		}
 		const onProbeError = (e: any) => {
 			logger.warn(`probe error ${id}: ${String(e)}`)
@@ -228,28 +242,40 @@ export class WinReader {
 			hid.write([0x01, 0x01, ...NEUTRAL_RUMBLE, 0x02]) // request device info
 		} catch (e) {
 			logger.warn(`device-info request failed ${id}: ${String(e)} — accepting leniently`)
-			decide(null)
+			decide(null, null)
 			return
 		}
-		timer = setTimeout(() => decide(null), 800) // no reply -> lenient accept
+		timer = setTimeout(() => decide(null, null), 800) // no reply -> lenient accept
 	}
 
-	#register(hid: any, key: string, id: string, unverified: boolean): void {
+	#register(hid: any, key: string, id: string, type: number | null, battery: number | null): void {
 		const short = id.includes(':') ? id.split(':').slice(-2).join(':') : id
+		const side = type === NES_TYPE_LEFT ? 'L' : type === NES_TYPE_RIGHT ? 'R' : '?'
+		const name = side === '?' ? `NES Controller · ${short}` : `NES Controller (${side})`
 		const dev: OpenDev = { id, hid, state: {} }
 		this.#devs.set(key, dev)
-		logger.info(`opened NES controller ${id}${unverified ? ' (unverified — no device-info reply)' : ''}`)
-		this.#handlers.onAdd({ id, side: '?', name: `NES Controller · ${short}` })
+		logger.info(`opened NES controller ${id} side=${side}${type === null ? ' (unverified)' : ''}`)
+		this.#handlers.onAdd({ id, side, name })
+		if (battery !== null) this.#handlers.onBattery(id, battery)
 		hid.on('data', (buf: Buffer) => this.#onData(dev, buf))
 		hid.on('error', (e: any) => {
 			logger.warn(`hid error ${id}: ${String(e)}`)
 			this.#close(key)
 		})
+		// Poll battery periodically (device-info request; reply decoded in #onData).
+		dev.pollTimer = setInterval(() => {
+			try {
+				hid.write([0x01, 0x03, ...NEUTRAL_RUMBLE, 0x02])
+			} catch {
+				/* ignore */
+			}
+		}, BATTERY_POLL_MS)
 	}
 
 	#close(key: string): void {
 		const d = this.#devs.get(key)
 		if (!d) return
+		if (d.pollTimer) clearInterval(d.pollTimer)
 		try {
 			d.hid.close()
 		} catch {
@@ -260,6 +286,11 @@ export class WinReader {
 	}
 
 	#onData(dev: OpenDev, buf: Buffer): void {
+		// Periodic device-info / standard replies (0x21) carry the battery status byte.
+		if (buf[0] === 0x21 && buf.length > 2) {
+			this.#handlers.onBattery(dev.id, parseBatteryPercent(buf[2]))
+			return
+		}
 		if (buf[0] !== 0x3f || buf.length < 4) return
 		const b1 = buf[1],
 			b2 = buf[2],

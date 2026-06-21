@@ -86,6 +86,7 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 	readonly detection = new NesDetection()
 	#child: ChildProcess | null = null
 	#winReader: WinReader | null = null
+	#battery = new Map<string, number>() // last known battery % per controller id
 
 	async init(): Promise<void> {
 		// Windows: no gamecontrollerd interference, so read raw HID in-process via
@@ -96,6 +97,7 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 				onAdd: (i) => this.#handleAdd(i),
 				onRemove: (id) => this.#handleRemove(id),
 				onButton: (id, b, p) => this.#handleButton(id, b, p),
+				onBattery: (id, pct) => this.#handleBattery(id, pct),
 			})
 			try {
 				await this.#winReader.start()
@@ -145,6 +147,10 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 	}
 	#handleButton(id: string, button: string, pressed: boolean): void {
 		bus.emit('button', id, button, pressed)
+	}
+	#handleBattery(id: string, percent: number): void {
+		this.#battery.set(id, percent)
+		bus.emit('battery', id, percent)
 	}
 
 	#onLine(line: string): void {
@@ -208,12 +214,27 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 	): Promise<OpenSurfaceResult> {
 		logger.debug(`Opening surface ${surfaceId} (${pluginInfo.name})`)
 		return {
-			surface: new NesSurface(surfaceId, pluginInfo, context, bus, (id, player) => this.setLed(id, player)),
+			surface: new NesSurface(
+				surfaceId,
+				pluginInfo,
+				context,
+				bus,
+				(id, player) => this.setLed(id, player),
+				(id) => this.#battery.get(id),
+			),
 			registerProps: {
 				brightness: false,
 				surfaceLayout: createLayout(),
 				pincodeMap: null,
 				location: null,
+				transferVariables: [
+					{
+						id: 'battery',
+						type: 'output',
+						name: 'Battery level (%)',
+						description: 'NES controller battery, 0–100 (updates about once a minute)',
+					},
+				],
 				configFields: [
 					{
 						id: 'player',
