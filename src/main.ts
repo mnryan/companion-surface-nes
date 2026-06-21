@@ -23,7 +23,7 @@ const logger = createModuleLogger('Plugin')
 const TEMPLATE_PREVIEW_URL =
 	'https://raw.githubusercontent.com/mnryan/companion-surface-nes/main/docs/template-preview.png'
 const TEMPLATE_DOWNLOAD_URL =
-	'https://github.com/mnryan/companion-surface-nes/releases/download/v1.0.0/NES-StreamDeck-Template.companionconfig'
+	'https://github.com/mnryan/companion-surface-nes/releases/latest/download/NES-StreamDeck-Template.companionconfig'
 const STUDIO_UPGRADE_URL = 'https://studioupgrade.com'
 const SPONSOR_URL = 'https://github.com/sponsors/mnryan'
 
