@@ -1,6 +1,54 @@
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+import { existsSync } from 'node:fs'
 import { createModuleLogger } from '@companion-surface/base'
 
 const logger = createModuleLogger('WinReader')
+
+// webpack (used by companion-surface-build) rewrites normal require/import into
+// its own module registry and hardcodes import.meta.url to the BUILD path, so
+// neither can load node-hid at runtime. __non_webpack_require__ is the real Node
+// require; combined with an absolute path it loads node-hid (and lets node-hid
+// resolve its own pkg-prebuilds/.node siblings) regardless of host context.
+declare const __non_webpack_require__: ((id: string) => any) | undefined
+
+function loadNodeHid(): any {
+	const realRequire = typeof __non_webpack_require__ === 'function' ? __non_webpack_require__ : null
+	if (!realRequire) throw new Error('no runtime require available (not a webpack bundle?)')
+
+	// Candidate base dirs that may contain node_modules/node-hid at runtime.
+	const bases: string[] = []
+	try {
+		if (typeof __dirname !== 'undefined' && __dirname) bases.push(__dirname)
+	} catch {
+		/* __dirname may not exist */
+	}
+	try {
+		if (process.argv[1]) bases.push(dirname(process.argv[1]))
+	} catch {
+		/* ignore */
+	}
+	try {
+		bases.push(dirname(fileURLToPath(import.meta.url)))
+	} catch {
+		/* import.meta.url may be a build path */
+	}
+	bases.push(process.cwd())
+
+	const tried: string[] = []
+	for (const base of bases) {
+		for (const rel of ['node_modules/node-hid', join('..', 'node_modules', 'node-hid')]) {
+			const p = join(base, rel)
+			tried.push(p)
+			if (existsSync(p)) {
+				logger.info(`node-hid resolved at: ${p}`)
+				return realRequire(p)
+			}
+		}
+	}
+	logger.warn(`node-hid not found near module; tried: ${tried.join(' | ')} — falling back to bare require`)
+	return realRequire('node-hid')
+}
 
 export interface WinControllerInfo {
 	id: string
@@ -49,10 +97,7 @@ export class WinReader {
 	}
 
 	async start(): Promise<void> {
-		// Indirect import so it's only loaded on Windows and isn't bundled/resolved
-		// at build time (node-hid is a native dep shipped in the package).
-		const load = (s: string): Promise<any> => import(s)
-		const mod: any = await load('node-hid')
+		const mod: any = loadNodeHid()
 		this.#HID = mod.default ?? mod
 		this.#scan()
 		this.#timer = setInterval(() => this.#scan(), 2000) // hotplug + disconnect
