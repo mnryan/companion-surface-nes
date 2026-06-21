@@ -16,6 +16,7 @@ export class NesSurface implements SurfaceInstance {
 	readonly #info: NesInfo
 	readonly #context: SurfaceContext
 	readonly #bus: EventEmitter
+	readonly #setLed: (id: string, player: number) => void
 
 	readonly #onButton = (id: string, button: string, pressed: boolean): void => {
 		if (id !== this.#info.id) return
@@ -30,11 +31,18 @@ export class NesSurface implements SurfaceInstance {
 		this.#context.disconnect(new Error('Controller disconnected'))
 	}
 
-	constructor(surfaceId: string, info: NesInfo, context: SurfaceContext, bus: EventEmitter) {
+	constructor(
+		surfaceId: string,
+		info: NesInfo,
+		context: SurfaceContext,
+		bus: EventEmitter,
+		setLed: (id: string, player: number) => void,
+	) {
 		this.#surfaceId = surfaceId
 		this.#info = info
 		this.#context = context
 		this.#bus = bus
+		this.#setLed = setLed
 		this.#bus.on('button', this.#onButton)
 		this.#bus.on('gone', this.#onGone)
 	}
@@ -47,8 +55,11 @@ export class NesSurface implements SurfaceInstance {
 	}
 
 	async init(): Promise<void> {}
-	async updateConfig(_config: Record<string, any>): Promise<void> {
-		// No editable config — the settings field is informational (static-text) only.
+	async updateConfig(config: Record<string, any>): Promise<void> {
+		// Apply the "Controller number (LED)" setting (also called on connect with
+		// the saved value, so the controller lights up to its assigned player).
+		const player = parseInt(String(config?.player ?? '0'), 10) || 0
+		this.#setLed(this.#info.id, player)
 	}
 	async close(): Promise<void> {
 		this.#bus.off('button', this.#onButton)

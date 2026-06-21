@@ -4,4 +4,7 @@
 // them by `${process.platform}-${process.arch}`.
 module.exports = {
 	extraFiles: ['helpers/nes-helper-*'],
+	// node-hid is the Windows input path (native module); keep it out of the
+	// esbuild bundle and ship it (with its win32 prebuilts) in the package.
+	externals: ['node-hid'],
 }

@@ -6,14 +6,15 @@
 	"scripts": {
 		"build": "rimraf dist && tsc -p tsconfig.build.json",
 		"dev": "tsc -p tsconfig.build.json --watch",
-		"package": "npm run build && companion-surface-build"
+		"package": "npm run build && companion-surface-build && node tools/postpackage.mjs"
 	},
 	"license": "MIT",
 	"engines": {
 		"node": "^22.14"
 	},
 	"dependencies": {
-		"@companion-surface/base": "^1.0.0"
+		"@companion-surface/base": "^1.0.0",
+		"node-hid": "^3.3.0"
 	},
 	"devDependencies": {
 		"@companion-module/tools": "^2.5.0",

@@ -15,6 +15,7 @@ import {
 } from '@companion-surface/base'
 import { NesSurface } from './instance.js'
 import { createLayout } from './buttons.js'
+import { WinReader } from './win-reader.js'
 
 const logger = createModuleLogger('Plugin')
 
@@ -26,10 +27,13 @@ const TEMPLATE_DOWNLOAD_URL =
 const STUDIO_UPGRADE_URL = 'https://studioupgrade.com'
 const SPONSOR_URL = 'https://github.com/sponsors/mnryan'
 
+// Player number -> "set player lights" LED bitfield (light the first N LEDs).
+const PLAYER_LED = [0x00, 0x01, 0x03, 0x07, 0x0f]
+
 export interface NesInfo {
 	id: string // Bluetooth address (stable per physical controller)
-	side: string // "L" | "R"
-	name: string // "NES Controller (L)"
+	side: string // "L" | "R" | "?"
+	name: string
 }
 
 // Shared event bus: instances subscribe for their own controller's events.
@@ -41,42 +45,51 @@ class NesDetection
 	extends EventEmitter<SurfacePluginDetectionEvents<NesInfo>>
 	implements SurfacePluginDetection<NesInfo>
 {
-	async triggerScan(): Promise<void> {
-		// Helper streams connect/disconnect live; nothing to re-scan.
-	}
+	async triggerScan(): Promise<void> {}
 	rejectSurface(): void {}
 }
 
-// Locate the platform-specific native helper binary. The packager flattens
-// extra files to their basename, so helpers carry a platform-arch suffix in the
-// filename (e.g. nes-helper-darwin-arm64). Checks the packaged layout (flat,
-// beside main.js) and the dev layout (helpers/ at the module root).
+// Locate the platform-specific native helper binary (macOS/Linux). Packager
+// flattens extra files to basename, so helpers carry a platform-arch suffix.
 function findHelper(): string | null {
 	const here = dirname(fileURLToPath(import.meta.url))
 	const ext = process.platform === 'win32' ? '.exe' : ''
 	const name = `nes-helper-${process.platform}-${process.arch}${ext}`
-	const candidates = [
-		join(here, name), // packaged: flat beside main.js
-		join(here, '..', 'helpers', name), // dev: dist/main.js, helpers/ at module root
-	]
+	const candidates = [join(here, name), join(here, '..', 'helpers', name)]
 	return candidates.find((p) => existsSync(p)) ?? null
 }
 
 class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 	readonly detection = new NesDetection()
 	#child: ChildProcess | null = null
+	#winReader: WinReader | null = null
 
 	async init(): Promise<void> {
+		// Windows: no gamecontrollerd interference, so read raw HID in-process via
+		// node-hid (runs in Companion's bundled Node) — no separate helper needed.
+		if (process.platform === 'win32') {
+			logger.info('Windows: reading controllers via node-hid (in-process)')
+			this.#winReader = new WinReader({
+				onAdd: (i) => this.#handleAdd(i),
+				onRemove: (id) => this.#handleRemove(id),
+				onButton: (id, b, p) => this.#handleButton(id, b, p),
+			})
+			try {
+				await this.#winReader.start()
+			} catch (e) {
+				logger.error(`win-reader failed (node-hid missing?): ${String(e)}`)
+			}
+			return
+		}
+
+		// macOS / Linux: spawn the native helper, parse its JSON event stream.
 		const path = findHelper()
 		if (!path) {
-			logger.warn(
-				`No NES helper binary for ${process.platform}-${process.arch}. ` +
-					`Controllers won't appear on this platform (macOS only for now).`,
-			)
+			logger.warn(`No NES helper binary for ${process.platform}-${process.arch}. Controllers won't appear.`)
 			return
 		}
 		try {
-			chmodSync(path, 0o755) // ensure exec bit survived packaging/extraction
+			chmodSync(path, 0o755)
 		} catch {
 			/* ignore */
 		}
@@ -90,6 +103,27 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 			createInterface({ input: this.#child.stdout }).on('line', (l) => this.#onLine(l))
 	}
 
+	// Shared handlers — called by both the helper-JSON path and the Windows reader.
+	#handleAdd(info: NesInfo): void {
+		const labelled = info.side === 'L' || info.side === 'R'
+		const discovered: DetectionSurfaceInfo<NesInfo> = {
+			surfaceId: info.id,
+			deviceHandle: info.id,
+			description: labelled ? `${info.name} · ${shortAddr(info.id)}` : info.name,
+			pluginInfo: info,
+		}
+		logger.info(`controller added: ${info.name} (${info.id})`)
+		this.detection.emit('surfacesAdded', [discovered])
+	}
+	#handleRemove(id: string): void {
+		logger.info(`controller removed: ${id}`)
+		bus.emit('gone', id)
+		this.detection.emit('surfacesRemoved', [id])
+	}
+	#handleButton(id: string, button: string, pressed: boolean): void {
+		bus.emit('button', id, button, pressed)
+	}
+
 	#onLine(line: string): void {
 		let msg: any
 		try {
@@ -101,32 +135,38 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 			case 'ready':
 				logger.info('helper ready')
 				break
-			case 'add': {
-				const info: NesInfo = { id: String(msg.id), side: String(msg.side), name: String(msg.name) }
-				const discovered: DetectionSurfaceInfo<NesInfo> = {
-					surfaceId: info.id,
-					deviceHandle: info.id,
-					description: `${info.name} · ${shortAddr(info.id)}`,
-					pluginInfo: info,
-				}
-				logger.info(`controller added: ${info.name} (${info.id})`)
-				this.detection.emit('surfacesAdded', [discovered])
+			case 'add':
+				this.#handleAdd({ id: String(msg.id), side: String(msg.side), name: String(msg.name) })
 				break
-			}
-			case 'remove': {
-				const id = String(msg.id)
-				logger.info(`controller removed: ${id}`)
-				bus.emit('gone', id)
-				this.detection.emit('surfacesRemoved', [id])
+			case 'remove':
+				this.#handleRemove(String(msg.id))
 				break
-			}
 			case 'button':
-				bus.emit('button', String(msg.id), String(msg.button), !!msg.pressed)
+				this.#handleButton(String(msg.id), String(msg.button), !!msg.pressed)
 				break
 		}
 	}
 
+	// Set a controller's player-number LEDs. Windows: node-hid write here.
+	// macOS/Linux: send a command to the helper over stdin (helper performs it).
+	setLed(id: string, player: number): void {
+		const arg = PLAYER_LED[player] ?? 0
+		if (this.#winReader) {
+			this.#winReader.setLed(id, arg)
+			return
+		}
+		try {
+			this.#child?.stdin?.write(JSON.stringify({ type: 'setLed', id, led: arg }) + '\n')
+		} catch {
+			/* ignore */
+		}
+	}
+
 	async destroy(): Promise<void> {
+		if (this.#winReader) {
+			this.#winReader.stop()
+			this.#winReader = null
+		}
 		if (this.#child) {
 			try {
 				this.#child.stdin?.end()
@@ -145,13 +185,27 @@ class NesControllerPlugin implements SurfacePlugin<NesInfo> {
 	): Promise<OpenSurfaceResult> {
 		logger.debug(`Opening surface ${surfaceId} (${pluginInfo.name})`)
 		return {
-			surface: new NesSurface(surfaceId, pluginInfo, context, bus),
+			surface: new NesSurface(surfaceId, pluginInfo, context, bus, (id, player) => this.setLed(id, player)),
 			registerProps: {
 				brightness: false,
 				surfaceLayout: createLayout(),
 				pincodeMap: null,
 				location: null,
 				configFields: [
+					{
+						id: 'player',
+						type: 'dropdown',
+						label: 'Controller number (LED)',
+						tooltip: 'Sets the solid player LEDs on the controller (stops the dancing lights).',
+						default: '0',
+						choices: [
+							{ id: '0', label: 'Off' },
+							{ id: '1', label: 'Player 1' },
+							{ id: '2', label: 'Player 2' },
+							{ id: '3', label: 'Player 3' },
+							{ id: '4', label: 'Player 4' },
+						],
+					},
 					{
 						id: 'template_info',
 						type: 'static-text',
